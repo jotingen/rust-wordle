@@ -8,15 +8,10 @@ fn main() {
 
     println!("Hello, world!");
     let words_raw: String = fs::read_to_string("src/words.txt").expect("Unable to read file");
-    let mut words: Vec<&str> = words_raw.split('\n').collect();
+    let words: Vec<&str> = words_raw.split('\n').collect();
     println!("{} words found in list", words.len());
 
-    //Filter out words that are not 5 character long
-    words.retain(|word| word.chars().count() == WORD_LENGTH+1);
-
-    println!("{} {}-letter words found in list", words.len(), WORD_LENGTH);
-
-    //Filter out words that are not 5 character long
+    //Copy list for guesses
     let mut filtered_words = words.clone();
 
     let secret_word = <&str>::clone(words.choose(&mut rand::thread_rng()).unwrap());
