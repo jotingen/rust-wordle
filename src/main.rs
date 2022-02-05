@@ -1,5 +1,5 @@
 use colored::*;
-use rand::seq::SliceRandom;
+//use rand::seq::SliceRandom;
 
 use std::collections::HashMap;
 use std::fs;
@@ -13,8 +13,13 @@ fn main() {
     println!("{} words found in list", words.len());
 
     //Copy list for guesses
-    let mut filtered_words = words.clone();
-    let mut char_population = [HashMap::new(),HashMap::new(), HashMap::new(), HashMap::new(),  HashMap::new() ];
+    let mut char_population = [
+        HashMap::new(),
+        HashMap::new(),
+        HashMap::new(),
+        HashMap::new(),
+        HashMap::new(),
+    ];
     for n in 0..char_population.len() {
         for c in 'a'..='z' {
             char_population[n].insert(c, 0);
@@ -28,11 +33,14 @@ fn main() {
 
     for n in 0..char_population.len() {
         for c in 'a'..='z' {
-        print!("{}:{}  ", c, char_population[n].get(&c).unwrap());
-    }
-    println!()
+            print!("{}:{}  ", c, char_population[n].get(&c).unwrap());
+        }
+        println!()
     }
 
+    let mut guesses_taken = Vec::new();
+
+    let mut filtered_words = words.clone();
     //Sort filtered words by best guesses
     let word_rating = |word: &str| {
         let mut rating = 1;
@@ -48,7 +56,9 @@ fn main() {
             if unique {
                 unique_chars += 1;
             }
-            rating += char_population[i].get(&word.chars().nth(i).unwrap()).unwrap();
+            rating += char_population[i]
+                .get(&word.chars().nth(i).unwrap())
+                .unwrap();
         }
 
         rating *= unique_chars;
@@ -59,44 +69,66 @@ fn main() {
     filtered_words.reverse();
     filtered_words.sort_by_key(|a| word_rating(a));
 
-    let secret_word = <&str>::clone(words.choose(&mut rand::thread_rng()).unwrap());
-    println!("Picking secret word: {}", secret_word);
+    println!();
+    for secret_word in &words {
+        print!("\r{}", &secret_word);
 
-    //Guessing
-    loop {
-        let guess_word = filtered_words.pop().unwrap();
+        let mut guess_word_pool = filtered_words.clone();
 
-        //TODO filter out words where yellow letter is in same position
-        for n in 0..WORD_LENGTH {
-            if secret_word.chars().nth(n).unwrap() == guess_word.chars().nth(n).unwrap() {
-                print!("{}", guess_word.chars().nth(n).unwrap().to_string().green());
-                //Filter out words that don't have matching characters in position n
-                filtered_words.retain(|word| {
-                    word.chars().nth(n).unwrap() == guess_word.chars().nth(n).unwrap()
-                });
-            } else if secret_word.contains(guess_word.chars().nth(n).unwrap()) {
-                print!(
-                    "{}",
-                    guess_word.chars().nth(n).unwrap().to_string().yellow()
-                );
-                //Filter out words that don't have matching characters in position n
-                filtered_words.retain(|word| word.contains(guess_word.chars().nth(n).unwrap()));
-                //Filter out words that have same letter in same position                filtered_words.retain(|word| {
-                filtered_words.retain(|word| {
-                    word.chars().nth(n).unwrap() != guess_word.chars().nth(n).unwrap()
-                });
+        //let secret_word = <&str>::clone(words.choose(&mut rand::thread_rng()).unwrap());
+        //println!("Picking secret word: {}", secret_word);
+
+        //Guessing
+        let mut guesses = 0;
+        loop {
+            let guess_word = guess_word_pool.pop().unwrap();
+            guesses += 1;
+
+            //TODO filter out words where yellow letter is in same position
+            for n in 0..WORD_LENGTH {
+                if secret_word.chars().nth(n).unwrap() == guess_word.chars().nth(n).unwrap() {
+                    //print!("{}", guess_word.chars().nth(n).unwrap().to_string().green());
+                    //Filter out words that don't have matching characters in position n
+                    guess_word_pool.retain(|word| {
+                        word.chars().nth(n).unwrap() == guess_word.chars().nth(n).unwrap()
+                    });
+                } else if secret_word.contains(guess_word.chars().nth(n).unwrap()) {
+                    //print!(
+                    //    "{}",
+                    //    guess_word.chars().nth(n).unwrap().to_string().yellow()
+                    //);
+                    //Filter out words that don't have matching characters in position n
+                    guess_word_pool
+                        .retain(|word| word.contains(guess_word.chars().nth(n).unwrap()));
+                    //Filter out words that have same letter in same position                guess_word_pool.retain(|word| {
+                    guess_word_pool.retain(|word| {
+                        word.chars().nth(n).unwrap() != guess_word.chars().nth(n).unwrap()
+                    });
+                } else {
+                    //print!("{}", guess_word.chars().nth(n).unwrap());
+                    //Filter out words with letters not in guessed word
+                    guess_word_pool
+                        .retain(|word| !word.contains(guess_word.chars().nth(n).unwrap()));
+                }
+            }
+            //println!();
+            if secret_word == &guess_word {
+                guesses_taken.push(guesses);
+                break;
             } else {
-                print!("{}", guess_word.chars().nth(n).unwrap());
-                //Filter out words with letters not in guessed word
-                filtered_words.retain(|word| !word.contains(guess_word.chars().nth(n).unwrap()));
+                //Remove bad guess from list
+                guess_word_pool.retain(|word| word != &guess_word);
             }
         }
-        println!();
-        if secret_word == guess_word {
-            break;
-        } else {
-            //Remove bad guess from list
-            filtered_words.retain(|word| word != &guess_word);
-        }
     }
+    print!("\r     \r");
+
+    let mut sum = 0;
+    for guess_count in guesses_taken.iter() {
+        sum += guess_count;
+    }
+    println!(
+        "Average number of guesses to solve: {}",
+        (sum as f64) / (guesses_taken.len() as f64)
+    );
 }
