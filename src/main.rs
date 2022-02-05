@@ -7,14 +7,16 @@ use std::fs;
 fn main() {
     const WORD_LENGTH: usize = 5;
 
-    let words_answers_raw: String = fs::read_to_string("src/wordle-answers.txt").expect("Unable to read file");
-    let words_guesses_raw: String = fs::read_to_string("src/wordle-guesses.txt").expect("Unable to read file");
+    let words_answers_raw: String =
+        fs::read_to_string("src/wordle-answers.txt").expect("Unable to read file");
+    let words_guesses_raw: String =
+        fs::read_to_string("src/wordle-guesses.txt").expect("Unable to read file");
 
     let answers: Vec<&str> = words_answers_raw.split('\n').collect();
     let mut words: Vec<&str> = words_guesses_raw.split('\n').collect();
     words.extend(&answers);
 
-    //Copy list for guesses
+    //Build up character counts for guess ordering
     let mut char_population = [
         HashMap::new(),
         HashMap::new(),
@@ -35,6 +37,7 @@ fn main() {
         }
     }
 
+    //Print out character counts
     //for n in 0..char_population.len() {
     //    for c in 'a'..='z' {
     //        print!("{}:{}  ", c, char_population[n].get(&c).unwrap());
@@ -42,7 +45,9 @@ fn main() {
     //    println!()
     //}
 
+    //Copy list for guesses
     let mut filtered_words = words.clone();
+
     //Sort filtered words by best guesses
     let word_rating = |word: &str| {
         let mut rating = 1.0;
@@ -68,16 +73,15 @@ fn main() {
 
         rating
     };
-
     filtered_words.reverse();
     filtered_words.sort_by(|a, b| word_rating(a).partial_cmp(&word_rating(b)).unwrap());
 
-    //Begin guessing
-    let mut guess_word_pool = filtered_words.clone();
+    //Pick secret word
     let secret_word = <&str>::clone(answers.choose(&mut rand::thread_rng()).unwrap());
     println!("Picking secret word: {}", secret_word);
 
     //Guessing
+    let mut guess_word_pool = filtered_words.clone();
     loop {
         let guess_word = guess_word_pool.pop().unwrap();
 
